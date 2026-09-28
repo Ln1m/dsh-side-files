@@ -9,26 +9,61 @@ window.__ModuleLoader__.load({
    tree and the composer that re-includes it); both HOME_DIRS point at this one table so the
    landing page and the @ source always agree. */
 const VK_HOME_DIRS = [];
+let vkLtWsPath = null;
+let vkLtWsAt = 0;
+/** 长任务产出工作区根：问 dsh-lt-tasks 的 host（/lt-tasks/roots），再用 list 确认它真实存在。 */
+function vkLtWsSync() {
+	const now = Date.now();
+	if (now - vkLtWsAt < 15000) return;
+	vkLtWsAt = now;
+	fetch("/lt-tasks/roots")
+		.then((r) => (r.ok === true ? r.json() : null))
+		.then((d) => {
+			const p = d !== null && d !== undefined && d.ok === true && typeof d.workspaceRoot === "string" ? d.workspaceRoot : "";
+			if (p.length === 0) return null;
+			return fetch("/vscode-files/list?path=" + encodeURIComponent(p))
+				.then((r) => (r.ok === true ? r.json() : null))
+				.then((l) => {
+					if (l === null || l === undefined || l.ok !== true || typeof l.path !== "string") return;
+					if (vkLtWsPath === l.path) return;
+					vkLtWsPath = l.path;
+					try { window.dispatchEvent(new Event("vk-home-dirs")); } catch { /* ignore */ }
+				});
+		})
+		.catch(() => {});
+}
+/** 工作区目录（探测，不写死路径）：官方 workspaces 列表 ∪ 会话 cwd ∪ 长任务产出工作区。 */
 function vkHomeDirsSync() {
+	vkLtWsSync();
+	const next = [];
+	const seen = new Set();
+	const add = (p, title) => {
+		const s = typeof p === "string" ? p.replace(/[\\/]+$/, "") : "";
+		if (s.length === 0) return;
+		const k = s.toLowerCase();
+		if (seen.has(k)) return;
+		seen.add(k);
+		next.push({ name: typeof title === "string" && title.length > 0 ? title : pathBase(s), path: s });
+	};
+	try {
+		const ws = ctxRef.current.get("workspaces");
+		const snap = ws !== null && ws !== undefined && ws.list !== null && ws.list !== undefined && typeof ws.list.getSnapshot === "function" ? ws.list.getSnapshot() : null;
+		const items = snap !== null && snap !== undefined && Array.isArray(snap.items) ? snap.items : [];
+		for (const it of items) { if (it !== null && it !== undefined) add(it.path, it.title); }
+	} catch { /* 官方工作区服务未就绪时回退到会话 cwd */ }
 	try {
 		const snapshot = ctxRef.current.get("sessions").list.getSnapshot();
 		const byId = snapshot !== undefined && snapshot !== null && snapshot.byId !== undefined && snapshot.byId !== null ? snapshot.byId : {};
-		const next = [];
-		const seen = new Set();
 		for (const key of Object.keys(byId)) {
 			const row = byId[key];
-			if (row === null || row === undefined || row.blank === true || typeof row.cwd !== "string") continue;
-			const cwd = row.cwd.replace(/[\\/]+$/, "");
-			if (cwd.length === 0) continue;
-			const norm = cwd.toLowerCase();
-			if (seen.has(norm)) continue;
-			seen.add(norm);
-			next.push({ name: pathBase(cwd), path: cwd });
+			if (row === null || row === undefined || row.blank === true) continue;
+			add(row.cwd, "");
 		}
-		next.sort((a, b) => a.path.localeCompare(b.path));
-		VK_HOME_DIRS.length = 0;
-		for (const d of next) VK_HOME_DIRS.push(d);
-	} catch { /* session service not ready yet */ }
+	} catch { /* 会话服务未就绪时保持空表 */ }
+	add(vkLtWsPath, "");
+	next.sort((a, b) => a.path.localeCompare(b.path));
+	VK_HOME_DIRS.length = 0;
+	for (const d of next) VK_HOME_DIRS.push(d);
 }
 
 // dsh-files-tree —— 左栏「文件」Tab（文件树）+ 输入区 @（原 dsh-files-tree）。
@@ -909,6 +944,12 @@ function vkHomeDirsSync() {
 		// onOpenInViewer 为可选：路线 A 下文件树住在官方左栏，点文件要在官方右侧栏多标签里打开，
 		// 由挂载层传入；不传时完全保持旧行为（中栏编辑器），因此不影响任何既有调用点。
 		function FileTree({ root, custom, onOpenFolder, onCloseFolder, onOpenFile, onOpenInViewer, onPickNative, activePath, recentDirs, autoRoot, onRemoveRecent, onRemoveAuto, fileList, onRememberFile, onRemoveFile, onDeleted, onDeleteTreeRow, sessionFiles, sessionDirs }) {
+	const [, vkHomeBump] = react.useReducer((x) => x + 1, 0);
+	react.useEffect(() => {
+		const on = () => { try { vkHomeBump(); } catch { /* ignore */ } };
+		window.addEventListener("vk-home-dirs", on);
+		return () => { try { window.removeEventListener("vk-home-dirs", on); } catch { /* ignore */ } };
+	}, []);
 			// 诊断探针（临时）：实例挂载/卸载各记一次；探针 id 也挂到 DOM 上，DevTools 里能核对是不是换了实例。
 			const vkProbeId = react.useRef("ft" + Math.random().toString(36).slice(2, 7));
 			react.useEffect(() => {
@@ -1983,26 +2024,61 @@ function vkHomeDirsSync() {
    tree and the composer that re-includes it); both HOME_DIRS point at this one table so the
    landing page and the @ source always agree. */
 const VK_HOME_DIRS = [];
+let vkLtWsPath = null;
+let vkLtWsAt = 0;
+/** 长任务产出工作区根：问 dsh-lt-tasks 的 host（/lt-tasks/roots），再用 list 确认它真实存在。 */
+function vkLtWsSync() {
+	const now = Date.now();
+	if (now - vkLtWsAt < 15000) return;
+	vkLtWsAt = now;
+	fetch("/lt-tasks/roots")
+		.then((r) => (r.ok === true ? r.json() : null))
+		.then((d) => {
+			const p = d !== null && d !== undefined && d.ok === true && typeof d.workspaceRoot === "string" ? d.workspaceRoot : "";
+			if (p.length === 0) return null;
+			return fetch("/vscode-files/list?path=" + encodeURIComponent(p))
+				.then((r) => (r.ok === true ? r.json() : null))
+				.then((l) => {
+					if (l === null || l === undefined || l.ok !== true || typeof l.path !== "string") return;
+					if (vkLtWsPath === l.path) return;
+					vkLtWsPath = l.path;
+					try { window.dispatchEvent(new Event("vk-home-dirs")); } catch { /* ignore */ }
+				});
+		})
+		.catch(() => {});
+}
+/** 工作区目录（探测，不写死路径）：官方 workspaces 列表 ∪ 会话 cwd ∪ 长任务产出工作区。 */
 function vkHomeDirsSync() {
+	vkLtWsSync();
+	const next = [];
+	const seen = new Set();
+	const add = (p, title) => {
+		const s = typeof p === "string" ? p.replace(/[\\/]+$/, "") : "";
+		if (s.length === 0) return;
+		const k = s.toLowerCase();
+		if (seen.has(k)) return;
+		seen.add(k);
+		next.push({ name: typeof title === "string" && title.length > 0 ? title : pathBase(s), path: s });
+	};
+	try {
+		const ws = ctxRef.current.get("workspaces");
+		const snap = ws !== null && ws !== undefined && ws.list !== null && ws.list !== undefined && typeof ws.list.getSnapshot === "function" ? ws.list.getSnapshot() : null;
+		const items = snap !== null && snap !== undefined && Array.isArray(snap.items) ? snap.items : [];
+		for (const it of items) { if (it !== null && it !== undefined) add(it.path, it.title); }
+	} catch { /* 官方工作区服务未就绪时回退到会话 cwd */ }
 	try {
 		const snapshot = ctxRef.current.get("sessions").list.getSnapshot();
 		const byId = snapshot !== undefined && snapshot !== null && snapshot.byId !== undefined && snapshot.byId !== null ? snapshot.byId : {};
-		const next = [];
-		const seen = new Set();
 		for (const key of Object.keys(byId)) {
 			const row = byId[key];
-			if (row === null || row === undefined || row.blank === true || typeof row.cwd !== "string") continue;
-			const cwd = row.cwd.replace(/[\\/]+$/, "");
-			if (cwd.length === 0) continue;
-			const norm = cwd.toLowerCase();
-			if (seen.has(norm)) continue;
-			seen.add(norm);
-			next.push({ name: pathBase(cwd), path: cwd });
+			if (row === null || row === undefined || row.blank === true) continue;
+			add(row.cwd, "");
 		}
-		next.sort((a, b) => a.path.localeCompare(b.path));
-		VK_HOME_DIRS.length = 0;
-		for (const d of next) VK_HOME_DIRS.push(d);
-	} catch { /* session service not ready yet */ }
+	} catch { /* 会话服务未就绪时保持空表 */ }
+	add(vkLtWsPath, "");
+	next.sort((a, b) => a.path.localeCompare(b.path));
+	VK_HOME_DIRS.length = 0;
+	for (const d of next) VK_HOME_DIRS.push(d);
 }
 
 		const react = require('react');
