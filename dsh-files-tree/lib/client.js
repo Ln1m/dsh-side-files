@@ -4,6 +4,32 @@ window.__ModuleLoader__.load({
 		var module = { exports: {} };
 		var exports = module.exports;
 		Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/* Workspace directories, discovered not hardcoded: the distinct cwd values in the session list,
+   which is what the official sidebar groups by. The merged bundle carries two module bodies (the
+   tree and the composer that re-includes it); both HOME_DIRS point at this one table so the
+   landing page and the @ source always agree. */
+const VK_HOME_DIRS = [];
+function vkHomeDirsSync() {
+	try {
+		const snapshot = ctxRef.current.get("sessions").list.getSnapshot();
+		const byId = snapshot !== undefined && snapshot !== null && snapshot.byId !== undefined && snapshot.byId !== null ? snapshot.byId : {};
+		const next = [];
+		const seen = new Set();
+		for (const key of Object.keys(byId)) {
+			const row = byId[key];
+			if (row === null || row === undefined || row.blank === true || typeof row.cwd !== "string") continue;
+			const cwd = row.cwd.replace(/[\\/]+$/, "");
+			if (cwd.length === 0) continue;
+			const norm = cwd.toLowerCase();
+			if (seen.has(norm)) continue;
+			seen.add(norm);
+			next.push({ name: pathBase(cwd), path: cwd });
+		}
+		next.sort((a, b) => a.path.localeCompare(b.path));
+		VK_HOME_DIRS.length = 0;
+		for (const d of next) VK_HOME_DIRS.push(d);
+	} catch { /* session service not ready yet */ }
+}
 
 // dsh-files-tree —— 左栏「文件」Tab（文件树）+ 输入区 @（原 dsh-files-tree）。
 
@@ -318,7 +344,7 @@ window.__ModuleLoader__.load({
 			return cut < 0 ? s : s.slice(cut + 1);
 		}
 		// 文件树落地页（未打开具体文件夹时）：折叠展示的常用根目录，展开即可浏览
-		const HOME_DIRS = [];
+		const HOME_DIRS = VK_HOME_DIRS;
 		/** 路径归一化：去掉首尾空白与尾部分隔符，盘根补回一条反斜杠，统一小写（Windows 不区分大小写）。 */
 		function normPath(p) {
 			if (typeof p !== "string") return "";
@@ -456,8 +482,7 @@ window.__ModuleLoader__.load({
 			for (const fn of [...vkHomeState.subs]) { try { fn(null); } catch { /* 订阅方可能已卸载 */ } }
 		}
 		// 桌面快捷入口：目录浏览器根视图里与磁盘同级列出的快捷入口，探测存在才显示
-		const DESKTOP_HINT = "";
-		/**
+				/**
 		 * 当前会话 id（**文件栏按会话隔离的唯一基准**，2026-09-12 用户口径「每个对话不共享文件栏」）。
 		 * root 作用域插槽拿不到 props.sessionId（见 §5.2.1），一律现取 sessions 服务的快照。
 		 * 取不到（插件刚加载 / 无会话面）时返回空串，调用方回落到一个与「无会话」等价的桶。
@@ -1134,11 +1159,16 @@ window.__ModuleLoader__.load({
 						.finally(settle);
 				}
 				// 桌面（本机重定向）：探测到才与磁盘同级列出
-				fetch("/vscode-files/list?path=" + encodeURIComponent(DESKTOP_HINT))
-					.then((r) => r.json())
-					.then((d) => { if (d && d.ok) setDesktopPath(DESKTOP_HINT); })
-					.catch(() => {})
-					.finally(settle);
+				(async () => {
+					for (const p of cands.map((d) => d + "Desktop")) {
+						try {
+							const r = await fetch("/vscode-files/list?path=" + encodeURIComponent(p));
+							const d = await r.json();
+							if (d && d.ok && typeof d.path === "string") { setDesktopPath(d.path); break; }
+						} catch { /* next candidate */ }
+					}
+					settle();
+				})();
 			}
 			function toggle(path) {
 				// 展开/收起写进**模块级共享状态**（vkFileTreeToggle）：@ 菜单的「文件区」立刻跟着变；
@@ -1487,6 +1517,7 @@ window.__ModuleLoader__.load({
 						topSeen.add(k);
 						return true;
 					};
+					vkHomeDirsSync();
 					els.push(secHead("__wsHead", "工作区目录", HOME_DIRS.length));
 					if (vkHomeIsOpen("工作区目录")) for (const hd of HOME_DIRS) {
 						if (!topSeenAdd(hd.path)) continue;
@@ -1947,6 +1978,32 @@ window.__ModuleLoader__.load({
 		var module = { exports: {} };
 		var exports = module.exports;
 		Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/* Workspace directories, discovered not hardcoded: the distinct cwd values in the session list,
+   which is what the official sidebar groups by. The merged bundle carries two module bodies (the
+   tree and the composer that re-includes it); both HOME_DIRS point at this one table so the
+   landing page and the @ source always agree. */
+const VK_HOME_DIRS = [];
+function vkHomeDirsSync() {
+	try {
+		const snapshot = ctxRef.current.get("sessions").list.getSnapshot();
+		const byId = snapshot !== undefined && snapshot !== null && snapshot.byId !== undefined && snapshot.byId !== null ? snapshot.byId : {};
+		const next = [];
+		const seen = new Set();
+		for (const key of Object.keys(byId)) {
+			const row = byId[key];
+			if (row === null || row === undefined || row.blank === true || typeof row.cwd !== "string") continue;
+			const cwd = row.cwd.replace(/[\\/]+$/, "");
+			if (cwd.length === 0) continue;
+			const norm = cwd.toLowerCase();
+			if (seen.has(norm)) continue;
+			seen.add(norm);
+			next.push({ name: pathBase(cwd), path: cwd });
+		}
+		next.sort((a, b) => a.path.localeCompare(b.path));
+		VK_HOME_DIRS.length = 0;
+		for (const d of next) VK_HOME_DIRS.push(d);
+	} catch { /* session service not ready yet */ }
+}
 
 		const react = require('react');
 		const contract = require('dsh-vk-contract');
@@ -2190,7 +2247,7 @@ window.__ModuleLoader__.load({
 
 		(function injectComposerCss() {
 			if (typeof document === 'undefined') return;
-			const plugin = 'dsh-files-tree';
+			const plugin = 'dsh-vk-composer';
 			for (const old of document.querySelectorAll('style[data-plugin="' + plugin + '"]')) { try { old.remove(); } catch { /* ignore */ } }
 			const tag = document.createElement('style');
 			tag.dataset.plugin = plugin;
@@ -2205,7 +2262,7 @@ window.__ModuleLoader__.load({
 			return cut < 0 ? s : s.slice(cut + 1);
 		}
 		// 文件树落地页（未打开具体文件夹时）：折叠展示的常用根目录，展开即可浏览
-		const HOME_DIRS = [];
+		const HOME_DIRS = VK_HOME_DIRS;
 		/** 路径归一化：去掉首尾空白与尾部分隔符，盘根补回一条反斜杠，统一小写（Windows 不区分大小写）。 */
 		function normPath(p) {
 			if (typeof p !== "string") return "";
@@ -2394,11 +2451,16 @@ window.__ModuleLoader__.load({
 						.catch(() => {})
 						.finally(settle);
 				}
-				fetch("/vscode-files/list?path=" + encodeURIComponent(DESKTOP_HINT))
-					.then((r) => r.json())
-					.then((d) => { if (d && d.ok && typeof d.path === "string") setDesktopPath(d.path); })
-					.catch(() => {})
-					.finally(settle);
+				(async () => {
+					for (const p of cands.map((d) => d + "Desktop")) {
+						try {
+							const r = await fetch("/vscode-files/list?path=" + encodeURIComponent(p));
+							const d = await r.json();
+							if (d && d.ok && typeof d.path === "string") { setDesktopPath(d.path); break; }
+						} catch { /* next candidate */ }
+					}
+					settle();
+				})();
 			}, []);
 			const goto = react.useCallback((target) => {
 				const t = String(target || "").trim();
@@ -3371,6 +3433,7 @@ window.__ModuleLoader__.load({
 				// 注：这里**不再**单独出「文件栏当前根」一组——用户口径是「一级只有那两个目录条目」；
 				//     「当前根优先」只保留在检索模式（vkAtRoots 仍把 treeRoot 排第一）。
 				const out = [];
+				vkHomeDirsSync();
 				const sections = { "工作区目录": 0, "当前会话文件": 0, "最近打开": 0, "文件列表": 0 };
 				const seen = new Set();
 				const seenAdd = (p) => {

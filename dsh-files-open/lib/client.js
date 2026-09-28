@@ -456,8 +456,7 @@ window.__ModuleLoader__.load({
 			for (const fn of [...vkHomeState.subs]) { try { fn(null); } catch { /* 订阅方可能已卸载 */ } }
 		}
 		// 桌面快捷入口：目录浏览器根视图里与磁盘同级列出的快捷入口，探测存在才显示
-		const DESKTOP_HINT = "";
-		/**
+				/**
 		 * 当前会话 id（**文件栏按会话隔离的唯一基准**，2026-09-12 用户口径「每个对话不共享文件栏」）。
 		 * root 作用域插槽拿不到 props.sessionId（见 §5.2.1），一律现取 sessions 服务的快照。
 		 * 取不到（插件刚加载 / 无会话面）时返回空串，调用方回落到一个与「无会话」等价的桶。
@@ -1005,11 +1004,16 @@ window.__ModuleLoader__.load({
 						.catch(() => {})
 						.finally(settle);
 				}
-				fetch("/vscode-files/list?path=" + encodeURIComponent(DESKTOP_HINT))
-					.then((r) => r.json())
-					.then((d) => { if (d && d.ok && typeof d.path === "string") setDesktopPath(d.path); })
-					.catch(() => {})
-					.finally(settle);
+				(async () => {
+					for (const p of cands.map((d) => d + "Desktop")) {
+						try {
+							const r = await fetch("/vscode-files/list?path=" + encodeURIComponent(p));
+							const d = await r.json();
+							if (d && d.ok && typeof d.path === "string") { setDesktopPath(d.path); break; }
+						} catch { /* next candidate */ }
+					}
+					settle();
+				})();
 			}, []);
 			react.useEffect(() => { probeRoots(); }, [probeRoots]);
 			const goto = react.useCallback((target) => {
