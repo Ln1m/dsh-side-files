@@ -1,7 +1,7 @@
 # dsh-files
 
-> Only the **vk build** ships in this repo: the sidebar "Files" tab and the right-column "Open local file" tab are positions provided by the [dsh-vk-suite](https://github.com/Ln1m/dsh-vk-suite) skeleton (contract + layout), which must be installed first.
-> **The vk build is the recommended one** in the two-build model: the sidebar tab switcher (Sessions / Files / Tasks / Extensions) plus the right-column and settings positions live in the skeleton, so only the vk build lands in them.
+> **The vk build only**: position — the sidebar Files tab (`vk.sidebar.files`) plus the right-column "Open local file" tab; install the [dsh-vk-suite](https://github.com/Ln1m/dsh-vk-suite) contract + skeleton first.
+> Conflicts: a slot renders only its highest-priority entry, and two registrations at the same priority throw; mutually exclusive with anything claiming the same position (see "How to use it / what it conflicts with" in [dsh-vk-suite](https://github.com/Ln1m/dsh-vk-suite)).
 
 The files family for the DSH Web left sidebar: two packages, one repo.
 

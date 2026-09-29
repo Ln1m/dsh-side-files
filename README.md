@@ -1,7 +1,7 @@
 # dsh-files
 
-> 本仓目前**只有 vk 版**：左栏「文件」Tab 与右栏「打开本机文件」标签的位置都由 [dsh-vk-suite](https://github.com/Ln1m/dsh-vk-suite)（契约 + 骨架）提供，需先装骨架。
-> **两个版本模型里推荐 vk 版**：左栏 Tab 切换（会话 / 文件 / 任务 / 工具）与右栏、设置的位置都在骨架里，只有 vk 版装得进这些位置。
+> 本仓**只有 vk 版**：位置 —— 左栏「文件」Tab（`vk.sidebar.files`）与右栏「打开本机文件」标签，需先装 [dsh-vk-suite](https://github.com/Ln1m/dsh-vk-suite) 契约 + 骨架。
+> 冲突：一个槽位只渲染优先级最高的一条，同优先级重复注册会直接抛错；与占同一位置的插件互斥（详见 [dsh-vk-suite](https://github.com/Ln1m/dsh-vk-suite) 的「推荐怎么用 / 会跟谁冲突」）。
 
 DSH Web 的左栏文件家族，两个包一个仓。
 
