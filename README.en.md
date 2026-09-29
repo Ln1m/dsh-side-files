@@ -20,6 +20,13 @@ dsh plugin --profile web add file:<this repo>/dsh-files-open
 
 Restart DSH afterwards. The left sidebar gains a "Files" tab and the right column an "Open local file" tab.
 
+## Recommended pairing / possible conflicts
+
+- **Install it together with the skeleton**: the sidebar **tab switcher** (Sessions / Files / Tasks / Extensions) in [dsh-vk-suite](https://github.com/Ln1m/dsh-vk-suite) (`dsh-vk-contract` + `dsh-vk-layout`) is what hosts the file tree — this package alone gives you no sidebar "Files" entry.
+- The right-column "Open local file" tab body is registered by the skeleton too: without it the tab keeps its title but shows only the official fallback text.
+- **Possible conflicts**: this package deliberately **replaces the official `files` tab type** (so the "new tab" list has no duplicate entry) and claims `conversation.input.left` for the composer's `@` references. A plugin registering the same `files` type, or registering into `conversation.input.left` at the same priority, is mutually exclusive with it: the first registration wins, the second throws and is swallowed, so one of the two never appears.
+- Stacked with another "three-column layout" plugin, the sidebar shape follows the highest-priority one.
+
 ## Configuration
 
 | Item | Where | Default |

@@ -1979,7 +1979,8 @@ function vkHomeDirsSync() {
 				const svc = ctxRef.current === null || ctxRef.current === undefined ? undefined : ctxRef.current.get(VK_SERVICE.OPEN_FILE);
 				if (svc === undefined || svc === null) { setTreeActive(null); setOpenError("打开失败"); return; }
 				const address = svc.address(liveSessionId, cwdRef.current, path);
-				if (svc.open(address)) { setTreeActive(path); setOpenError(null); return; }
+				// replaceTab：右栏里只有「开始」这种主页标签时，文件直接顶替它，不并排多开一个标签。
+				if (svc.open(address, { replaceTab: true })) { setTreeActive(path); setOpenError(null); return; }
 				setTreeActive(null);
 				setOpenError("无法在右栏打开该文件");
 			}, [readSessionId]);
@@ -4214,7 +4215,14 @@ function vkHomeDirsSync() {
 				return false;
 			}
 			try {
-				controller.openResource(address);
+				// 与文件栏点文件同一条路：走骨架的 vkOpenFile（它会把「开始」这类主页标签顶替掉），
+				// 服务不在场才退回官方 openResource。
+				const vk = ctx.get("vkOpenFile");
+				if (vk !== void 0 && vk !== null && typeof vk.open === "function") {
+					if (vk.open(address, { replaceTab: true }) !== true) throw new Error("vkOpenFile.open 返回失败");
+				} else {
+					controller.openResource(address);
+				}
 				try { globalThis.__VK_LAST_OPEN__.stage = "ok"; } catch { /* ignore */ }
 				return true;
 			} catch (e) {
